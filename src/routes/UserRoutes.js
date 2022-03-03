@@ -11,6 +11,6 @@ Router.get('/whoami',auth,UserController.whoAmI)
 
 Router.get('/',UserController.index)
 Router.get('/:id',auth,UserController.find)
-Router.delete('/:id',UserController.delete)
+Router.delete('/:id',auth,UserController.delete)
 
 module.exports = Router
