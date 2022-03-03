@@ -57,6 +57,7 @@ class UserController {
             refresh_token : generateRefreshToken(user)
           }
         };
+        delete user.password
         res.status(httpStatus.OK).send(user);
       })
       .catch((err) => {
