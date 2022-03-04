@@ -7,6 +7,13 @@ class ProjectService extends Service {
   constructor(model) {
     super(model);
   }
+
+  list(where) {
+    return this.model.find(where || {}).populate({
+      path: "user",
+      select: "name email",
+    });
+  }
 }
 
 module.exports = new ProjectService();

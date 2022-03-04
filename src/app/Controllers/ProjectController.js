@@ -23,6 +23,7 @@ class ProjectController {
   }
 
   create(req, res) {
+    req.body.user = req.user;
     ProjectService.insert(req.body)
       .then((response) => {
         res.status(httpStatus.CREATED).send(response);

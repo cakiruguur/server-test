@@ -34,4 +34,4 @@ UserSchema.path("email").validate(async (email) => {
   return !exists;
 }, "Email adresiyle daha önce kayıt yapılmış..");
 
-module.exports = Mongoose.model("User", UserSchema);
+module.exports = Mongoose.model("user", UserSchema);

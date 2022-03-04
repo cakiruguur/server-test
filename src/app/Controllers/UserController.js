@@ -2,6 +2,8 @@ const UserService = require("@Services/UserService");
 const httpStatus = require("http-status");
 const { passwordToHash } = require("@/utils/helpers/password");
 const { generateAccessToken, generateRefreshToken } = require("@/utils/helpers/token");
+const eventEmitter = require("@/scripts/events/eventEmitter");
+const uuid = require("uuid");
 
 class UserController {
   index(req, res) {
@@ -72,6 +74,46 @@ class UserController {
       });
   }
 
+  resetPassword(req, res) {
+    // Yeni şifrenin oluşturulması
+    const uuid_pass = uuid.v4().split("-")[0];
+    const changedPassword = passwordToHash(uuid_pass);
+
+    //User Servisinden parola sıfırlama metodu
+    UserService.resetPassword(req.body.email, changedPassword)
+      .then((updatedUser) => {
+        // Kullanıcı var mı kontrolü
+        if (!updatedUser) return res.status(httpStatus.NOT_FOUND).send({ message: "Kullanıcı bulunamadı" });
+
+        /* @TODO Email işlemini proje bitince aç */
+
+        //Event Emitter ile mail gönderme işlemi
+        // eventEmitter.emit("send_email", {
+        //   to: req.body.email,
+        //   subject: "Şifre Sıfırlama",
+        //   html: `Sıfırlanan şifreniz <b>${uuid_pass}</b>. <br /> İyi günler dileriz.`,
+        // });
+
+        // Kullanıcıyı bilgilendiriyoruz
+        // res.status(httpStatus.OK).send({
+        //   message: "Şifre sıfırlama işleminiz tamamlandı. Şifreniz mailinize gönderildi",
+        // });
+        res.status(httpStatus.OK).send(`Yeni şifre : ${uuid_pass}`);
+      })
+      .catch((err) => {
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ error: "Şifre sıfırlama sırasında bir hata oluştu." });
+      });
+  }
+
+  projectList(req, res) {
+    UserService.projectList(req.user._id)
+      .then((result) => {
+        res.status(httpStatus.OK).send(result);
+      })
+      .catch((err) => {
+        res.status(httpStatus.NOT_FOUND).send(err);
+      });
+  }
   //@TODO: Proje bitince sil
   whoAmI(req, res) {
     return res.status(200).send(req.user);
