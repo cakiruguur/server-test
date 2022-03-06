@@ -6,8 +6,9 @@ const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const routes = require('@Routes/');
-const helmet = require("helmet");
-app.use(helmet())
+const fileUpload = require("express-fileupload");
+
+app.use(fileUpload());
 
 // @INFO: Uygulama çalışıyor
 app.listen(PORT, () => {

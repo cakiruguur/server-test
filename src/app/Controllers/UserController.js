@@ -4,26 +4,26 @@ const { passwordToHash } = require("@/utils/helpers/password");
 const { generateAccessToken, generateRefreshToken } = require("@/utils/helpers/token");
 const eventEmitter = require("@/scripts/events/eventEmitter");
 const uuid = require("uuid");
+const ApiError = require("../Errors/apiErrors");
 
 class UserController {
   index(req, res) {
     UserService.list()
-      .then((response) => {
-        res.status(httpStatus.OK).send(response);
+      .then((users) => {
+        res.status(httpStatus.OK).send(users);
       })
       .catch((err) => {
         res.send(err);
       });
   }
 
-  find(req, res) {
+  find(req, res, next) {
     UserService.findById(req.params.id)
-      .then((response) => {
-        if (response == null) return res.status(httpStatus.NOT_FOUND).send({ error: "Kullanıcı kaydı bulunamadı" });
-        res.status(httpStatus.OK).send(response);
-      })
-      .catch((e) => {
-        res.status(httpStatus.NOT_FOUND).send({ error: "ID Bilgisi doğru değil" });
+      .then((user) => {
+        if (!user) return next(ApiError.notFoundWith('Kullanıcı'));
+        res.status(httpStatus.OK).send(user);
+      }).catch((e) => {
+        next(ApiError.wrongID());
       });
   }
 
@@ -38,25 +38,27 @@ class UserController {
       });
   }
 
-  delete(req, res) {
+  delete(req, res, next) {
     UserService.destroy(req.params.id)
-      .then((response) => {
-        if (response == null) return res.status(httpStatus.NOT_FOUND).send({ error: "Kullanıcı kaydı bulunamadı" });
-        res.status(httpStatus.OK).send(response);
+      .then((user) => {
+        if (!user) return next(ApiError.notFoundWith('Kullanıcı'));
+        res.status(httpStatus.OK).send(user);
       })
       .catch((e) => {
-        res.status(httpStatus.NOT_FOUND).send({ error: "ID Bilgisi doğru değil" });
+        next(ApiError.wrongID());
       });
   }
 
   login(req, res) {
     //Hashlenmiş parolayı requeste atıyoruz
     req.body.password = passwordToHash(req.body.password);
-
-    UserService.login(req.body)
+    UserService.findOne({ email : req.body.email})
       .then((user) => {
-        // User var mı diye kontrol ediyoruz
-        if (!user) return res.status(httpStatus.NOT_FOUND).send({ message: "Kullanıcı bilgileri yanlış" });
+        // User var mı kontrolü
+        if (!user) return res.status(httpStatus.NOT_FOUND).send({ message: "Böyle bir kullanıcı bulunmamaktadır." });
+
+        // Kullanıcının parolası doğru mu kontrolü
+        if (user.password !== req.body.password) return res.status(httpStatus.UNAUTHORIZED).send({ message: "Kullanıcı parolası yanlış" });
 
         // User objesini manipüle ediyoruz
         user = {
@@ -70,7 +72,7 @@ class UserController {
         res.status(httpStatus.OK).send(user);
       })
       .catch((err) => {
-        res.send(err);
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).send({message : "Kullanıcı girişi sırasında bir hata oluştu"});
       });
   }
 
@@ -80,7 +82,7 @@ class UserController {
     const changedPassword = passwordToHash(uuid_pass);
 
     //User Servisinden parola sıfırlama metodu
-    UserService.resetPassword(req.body.email, changedPassword)
+    UserService.update({ email: req.body.email }, { password: changedPassword })
       .then((updatedUser) => {
         // Kullanıcı var mı kontrolü
         if (!updatedUser) return res.status(httpStatus.NOT_FOUND).send({ message: "Kullanıcı bulunamadı" });
@@ -114,6 +116,33 @@ class UserController {
         res.status(httpStatus.NOT_FOUND).send(err);
       });
   }
+
+  fileUpload(req, res, next) {
+    const file = req?.files?.profile_img;
+    if (!file) return next(new ApiError('Lütfen bir dosya yükleyiniz', httpStatus.NOT_FOUND));
+
+    const path = require("path");
+    const fileName = req?.user?.name;
+    const fileExt = path.extname(file.name).split(".")[1];
+    const allowExt = ["jpeg"];
+
+    if (!allowExt.includes(fileExt)) return next(new ApiError('Dosya uzantısına izin verilmiyor', httpStatus.BAD_REQUEST));
+
+    const filePath = path.join(__dirname, "../../uploads", fileName + "." + fileExt);
+
+    req.files.profile_img.mv(filePath, (err) => {
+      if (err) return next(new ApiError(err));
+
+      UserService.update({ email: req.user.email }, { profile_photo: fileName + "." + fileExt })
+        .then((updatedUser) => {
+          res.status(httpStatus.OK).send({ message: "Dosya yükleme işleminiz başarıyla tamamlandı", updated: updatedUser });
+        })
+        .catch((err) => {
+          next(new ApiError(err));
+        });
+    });
+  }
+
   //@TODO: Proje bitince sil
   whoAmI(req, res) {
     return res.status(200).send(req.user);

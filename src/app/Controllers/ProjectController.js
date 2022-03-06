@@ -1,5 +1,6 @@
 const ProjectService = require("@Services/ProjectService");
 const httpStatus = require("http-status");
+const ApiError = require("../Errors/apiErrors");
 
 class ProjectController {
   index(req, res) {
@@ -12,13 +13,14 @@ class ProjectController {
       });
   }
 
-  find(req, res) {
+  find(req, res, next) {
     ProjectService.findById(req.params.id)
-      .then((response) => {
-        res.status(httpStatus.OK).send(response);
+      .then((project) => {
+        if(!project) next(ApiError.notFoundWith('Proje'))
+        res.status(httpStatus.OK).send(project);
       })
       .catch((err) => {
-        res.send(err);
+        next(ApiError.wrongID());
       });
   }
 

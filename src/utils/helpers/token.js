@@ -8,7 +8,7 @@ const generateAccessToken = (user) => {
 
 const generateRefreshToken = (user) => {
     return JWT.sign({...user._doc}, process.env.REFRESH_TOKEN_SECRET)
-} 
+}
 
 module.exports = {
     generateAccessToken,
