@@ -5,7 +5,7 @@ const auth = (req, res, next) => {
 
   if (token == null) return res.status(httpStatus.UNAUTHORIZED).send({ message: "Giriş yapmanız gerekmektedir" });
 
-  JWT.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+  JWT.verify(token, Config.APP.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       res.send(err);
     }

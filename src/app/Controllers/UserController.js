@@ -5,6 +5,7 @@ const { generateAccessToken, generateRefreshToken } = require("@/utils/helpers/t
 const eventEmitter = require("@/scripts/events/eventEmitter");
 const uuid = require("uuid");
 const ApiError = require("../Errors/apiErrors");
+const fileUpload = require("../../utils/helpers/fileUpload");
 
 class UserController {
   index(req, res) {
@@ -20,9 +21,10 @@ class UserController {
   find(req, res, next) {
     UserService.findById(req.params.id)
       .then((user) => {
-        if (!user) return next(ApiError.notFoundWith('Kullanıcı'));
+        if (!user) return next(ApiError.notFoundWith("Kullanıcı"));
         res.status(httpStatus.OK).send(user);
-      }).catch((e) => {
+      })
+      .catch((e) => {
         next(ApiError.wrongID());
       });
   }
@@ -41,7 +43,7 @@ class UserController {
   delete(req, res, next) {
     UserService.destroy(req.params.id)
       .then((user) => {
-        if (!user) return next(ApiError.notFoundWith('Kullanıcı'));
+        if (!user) return next(ApiError.notFoundWith("Kullanıcı"));
         res.status(httpStatus.OK).send(user);
       })
       .catch((e) => {
@@ -52,7 +54,7 @@ class UserController {
   login(req, res) {
     //Hashlenmiş parolayı requeste atıyoruz
     req.body.password = passwordToHash(req.body.password);
-    UserService.findOne({ email : req.body.email})
+    UserService.findOne({ email: req.body.email })
       .then((user) => {
         // User var mı kontrolü
         if (!user) return res.status(httpStatus.NOT_FOUND).send({ message: "Böyle bir kullanıcı bulunmamaktadır." });
@@ -72,7 +74,7 @@ class UserController {
         res.status(httpStatus.OK).send(user);
       })
       .catch((err) => {
-        res.status(httpStatus.INTERNAL_SERVER_ERROR).send({message : "Kullanıcı girişi sırasında bir hata oluştu"});
+        res.status(httpStatus.INTERNAL_SERVER_ERROR).send({ message: "Kullanıcı girişi sırasında bir hata oluştu" });
       });
   }
 
@@ -96,7 +98,7 @@ class UserController {
         //   html: `Sıfırlanan şifreniz <b>${uuid_pass}</b>. <br /> İyi günler dileriz.`,
         // });
 
-        // Kullanıcıyı bilgilendiriyoruz
+        // // Kullanıcıyı bilgilendiriyoruz
         // res.status(httpStatus.OK).send({
         //   message: "Şifre sıfırlama işleminiz tamamlandı. Şifreniz mailinize gönderildi",
         // });
@@ -107,39 +109,22 @@ class UserController {
       });
   }
 
-  projectList(req, res) {
-    UserService.projectList(req.user._id)
-      .then((result) => {
-        res.status(httpStatus.OK).send(result);
-      })
-      .catch((err) => {
-        res.status(httpStatus.NOT_FOUND).send(err);
-      });
-  }
+  async profilePhoto(req, res) {
+    const user = req.user
 
-  fileUpload(req, res, next) {
-    const file = req?.files?.profile_img;
-    if (!file) return next(new ApiError('Lütfen bir dosya yükleyiniz', httpStatus.NOT_FOUND));
+    if(!user) throw ApiError.notFoundWith("Kullanıcı")
 
-    const path = require("path");
-    const fileName = req?.user?.name;
-    const fileExt = path.extname(file.name).split(".")[1];
-    const allowExt = ["jpeg"];
+    const uploaded = await fileUpload({
+      file: req.files?.profile_photo,
+      uploadName: user?._id,
+      path: "profile",
+    });
 
-    if (!allowExt.includes(fileExt)) return next(new ApiError('Dosya uzantısına izin verilmiyor', httpStatus.BAD_REQUEST));
+    const updatedUser = await UserService.update({ email: user.email }, { profile_photo: uploaded });
 
-    const filePath = path.join(__dirname, "../../uploads", fileName + "." + fileExt);
-
-    req.files.profile_img.mv(filePath, (err) => {
-      if (err) return next(new ApiError(err));
-
-      UserService.update({ email: req.user.email }, { profile_photo: fileName + "." + fileExt })
-        .then((updatedUser) => {
-          res.status(httpStatus.OK).send({ message: "Dosya yükleme işleminiz başarıyla tamamlandı", updated: updatedUser });
-        })
-        .catch((err) => {
-          next(new ApiError(err));
-        });
+    res.status(httpStatus.OK).send({ 
+      message: "Dosya yükleme işleminiz başarıyla tamamlandı", 
+      profile_photo: updatedUser.profile_photo
     });
   }
 

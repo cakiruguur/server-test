@@ -1,13 +1,14 @@
 const JWT = require("jsonwebtoken");
+const {APP} = Config
 
 const generateAccessToken = (user) => {
-    return JWT.sign({...user._doc}, process.env.ACCESS_TOKEN_SECRET, {
+    return JWT.sign({...user._doc}, APP.ACCESS_TOKEN_SECRET, {
         expiresIn: "1w",
       });
 }
 
 const generateRefreshToken = (user) => {
-    return JWT.sign({...user._doc}, process.env.REFRESH_TOKEN_SECRET)
+    return JWT.sign({...user._doc}, APP.REFRESH_TOKEN_SECRET)
 }
 
 module.exports = {

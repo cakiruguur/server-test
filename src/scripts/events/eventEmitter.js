@@ -1,4 +1,4 @@
-const EventEmitter = require("events");
-const eventEmitter = new EventEmitter();
+const events = require("events");
+const eventEmitter = new events();
 
-module.exports = eventEmitter
+module.exports = eventEmitter;

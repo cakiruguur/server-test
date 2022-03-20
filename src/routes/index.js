@@ -2,29 +2,27 @@ const express = require("express");
 const helmet = require("helmet");
 // Routes
 const UserRoutes = require("@Routes/UserRoutes");
-const ProjectRoutes = require("@Routes/ProjectRoutes");
-const apiError = require("../app/Errors/apiErrors");
+const CompanyRoutes = require("@Routes/CompanyRoutes");
+//Error
+const {errorHandler, notFound} = require("@Middleware/errorHandler")
+//Middleware
+const auth = require("@Middleware/auth");
 
 module.exports = (app) => {
   // @INFO: Uygulamanın kullanacağı paketler
+  app.use(helmet());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(helmet());
+
 
   // @INFO: Endpoints
-  app.use("/projects", ProjectRoutes);
   app.use("/user", UserRoutes);
+  app.use("/companies",auth, CompanyRoutes);
+
 
   // @INFO: Yukardaki routeların hiçbirine denk gelmediyse hata verir
-  app.use("/:not", (req, res, next) => {
-    next(apiError.notFound());
-  });
-
-  // @INFO: Anasayfa
-  app.use("/", (req, res) => {
-    res.send({ message: "anasayfa" });
-  });
+  app.use(notFound);
 
   // @INFO: Error Handling
-  app.use(require("@Middleware/errorHandler"));
+  app.use(errorHandler);
 };

@@ -1,6 +1,6 @@
 class Service {
   constructor(model) {
-    this.model = model;
+    /**@private*/ this.model = model;
   }
 
   list() {
